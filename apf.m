@@ -5,85 +5,14 @@ clf
 poolObj = gcp('nocreate'); % Gets current pool without creating a new one if it doesn't exist
 tic;  % Start timing
 cmap = colororder();
+
+% Load the fitted kernel density estimation probability density functions of the process noise
 load('kdeFunction.mat');
 load('kdeFunction_w.mat');
 
 %% Simulation of a model for generating hypothetical measurements
 
-% rmse_list = zeros(1,64);
-% rmse_list_imputed = zeros(1,64);
-% rmse_list_real = zeros(1,64);
-% rmse_list_w = zeros(1,64);
-% rmse_list_imputed_w = zeros(1,64);
-% rmse_list_real_w = zeros(1,64);
-% hyper_q_counter = 1;
-
-% for hyper_q = linspace(0, 1, 8)
-% for hyper_q_w = linspace(0, 1, 8)
-
-states = jumping_strategy;
-subplotXmanyY_er(7,1)
-plot(states, 'LineWidth', 1.5);
-ylim([-2 12])
-xlim([0 1050])
-set(gca, 'FontSize', 11); % Set the font size of the current axes
-xlabel('Time Step', 'FontSize', 12);
-%ylabel('System Mode (Real)', 'FontSize', 8);
-ylabel('System Mode', 'FontSize', 12);
-title('Markovian Jump System Parameter Transitions', 'FontSize', 14);
-
-
-n = 2;                                         %number of state
-m = 2;                                         %numer of measurements
-w(:,1)     = [.01;2];
-dt=0.1;    tend = 100;    t=0:dt:tend;
-tsim = 0:dt:tend-dt;
-T = length(t);
-phi=10;
-r = 1e-4;                                      %std of measurement
-
-er = zeros(n,length(tsim));
-er_process = zeros(n,length(tsim));
-x = zeros(n,length(tsim));
-uc = zeros(3,length(tsim));
-z = zeros(n,length(tsim));
-x_true = zeros(n,length(tsim));
-wf = ones(length(w),length(tsim));
-wf(:,1)=[0.029, 8];
-
-
-
-for i=1:length(states)
-    if i~=1 & states(i) == states(i-1)
-        continue
-    else
-        [ftime, wd]= faults(i/10,tend+dt, states(i));
-        for kk=1:length(ftime)-1
-            k=find(t>=ftime(kk) & t<=ftime(kk+1));
-            for j=k
-                wf(:,j)=wd(:,kk);
-            end
-        end
-    end
-end
-% hold on
-% subplotXmanyY_er(8,2)
-% plot(wf(2,:), 'LineWidth', 1.5, 'color', cmap(2,:))
-% ylim([-2 12])
-% xlim([0 1050])
-% set(gca, 'FontSize', 11); % Set the font size of the current axes
-% xlabel('Time Step', 'FontSize', 12);
-% %ylabel('$V_{bus} (V)$ (Real)', 'interpreter', 'latex', 'FontSize', 8);
-% ylabel('$V_{bus} (V)$', 'interpreter', 'latex', 'FontSize', 15);
-
-
-% Process noise parameters
-mu_process1 = 0; sigma_process1 = 50*r*phi*1e-1*10; % Mean and SD for I_dot
-mu_process2 = 0; sigma_process2 = 50*r*phi*1e-1*10; % Mean and SD for omega_dot
-
-% Measurement noise parameters
-mu_measurement1 = 0; sigma_measurement1 = 50*r*phi*1e-1; % Mean and SD for I_dot
-mu_measurement2 = 0; sigma_measurement2 = 50*r*phi*1e-1; % Mean and SD for omega_dot
+% Process and measurement noise parameters
 
 A_process_1 = 0;
 A_measurement_1 = 0;
@@ -91,29 +20,14 @@ A_measurement_1 = 0;
 B_process_1 = 0.05;
 B_measurement_1 = 0.05;
 
-name = 'Logistic'; % Type of distribution
+name = 'Logistic'; % Type of distribution of the noise (Non-Gaussian)
 
 
 i=0; x(:,1)=[0;0];
 for ti=tsim-2*dt
     i=i+1;
-    %     processNoise = randn(length(tsim),1)*processNoiseSigma;
-    %     processNoise = processNoise';
-    % Gaussian noise:
-    %     er_process(:,i+1) = 50*[normrnd(0,r*phi*1e-1*10); normrnd(0,r*phi*1e-1*10)]; % process noise
-    %     er(:,i+1) = 50*[normrnd(0,r*phi*1e-1); normrnd(0,r*phi*1e-1)]; % measurement noise
-
-    %     % Generating Laplace noise for process for both variables
-    %     u_process = rand(2,1) - 0.5; % 2x1 vector for two variables
-    %     laplace_noise_process = [mu_process1 - b_process1 * sign(u_process(1)) * log(1 - 2 * abs(u_process(1)));
-    %         mu_process2 - b_process2 * sign(u_process(2)) * log(1 - 2 * abs(u_process(2)))];
 
     er_process(:,i+1) = [random(name, A_process_1, B_process_1); random(name, A_process_1, 10*B_process_1)]; % Additive Laplace process noise for both variables
-
-    %     % Generating Laplace noise for measurement for both variables
-    %     u_measurement = rand(2,1) - 0.5; % 2x1 vector for two variables
-    %     laplace_noise_measurement = [mu_measurement1 - b_measurement1 * sign(u_measurement(1)) * log(1 - 2 * abs(u_measurement(1)));
-    %         mu_measurement2 - b_measurement2 * sign(u_measurement(2)) * log(1 - 2 * abs(u_measurement(2)))];
 
     er(:,i+1) = [random(name, A_measurement_1, B_measurement_1); random(name, A_measurement_1, 10*B_measurement_1)]; % Additive Laplace measurement noise for both variables
 
@@ -121,33 +35,30 @@ for ti=tsim-2*dt
     u = 5*sin(0.2*ti);
     uc(:,i+1) = u;
     x(:,i+1) = f_model(x(:,i),wf(:,i),u,dt) + er_process(:,i+1); % wf is responsbile for injecting the faults | x is the combined state vector for I_dot and omega_dot
+    % The codes for f_model and faults are not provided as do not have permission to make them public but you can use any dynamic system. The faults are injected locally but they are not necessary for an estimation problem so they are not necessary as well.
     z(:,i+1) = x(:,i+1) + er(:,i+1);
     x_true(:,i+1) = f_model(x_true(:,i),wf(:,i),u,dt);
 end
 
-% X=x;
 X_real=x(1,:); % only I
 X_real_w=x(2,:); % only I
 X_real_true=x_true(1,:); % only I
-% Z=z;
 Z_real=z(1,:); % only I
 Z_real_w=z(2,:); % only w
 
 
 
-% subplotXmanyY_er(8,3)
-% plot(Z_real, 'color', cmap(3,:))
-% ylim([-1.5 1.5])
-% xlim([0 1050])
-% set(gca, 'FontSize', 11); % Set the font size of the current axes
-% xlabel('Time Step', 'FontSize', 12);
-% ylabel('$I (A)$', 'interpreter', 'latex', 'FontSize', 15);
-% %legend('States', 'V_{bus}', '\dot{I}')
-% fig = gcf;
-% %saveas(fig,'images/2.svg')
+subplotXmanyY_er(7,1)
+plot(Z_real, 'color', cmap(3,:))
+ylim([-1.5 1.5])
+xlim([0 1050])
+set(gca, 'FontSize', 11); % Set the font size of the current axes
+xlabel('Time Step', 'FontSize', 12);
+ylabel('$I (A)$', 'interpreter', 'latex', 'FontSize', 15);
 
-prompt = "Do you want to continue (y/n)? ";
-inputStr = input(prompt, 's');  % Treat input as a string
+
+prompt = "Do you want to continue (y/n)? ";  % So the code up to this point, generates a signal output and this prompt makes sure if you want to perform state estimation based on this measurement or sensor signal.
+inputStr = input(prompt, 's');  % Treat the input as a string
 if inputStr == 'n'
     disp('Exiting...');
     return;
@@ -159,7 +70,7 @@ end
 
 data = zeros(1, 1000);
 for xii = 1:1000
-    data(xii) = (1-0.85)*random(name, A_process_1, 1*B_process_1) - 0.85*random(name, A_measurement_1, 1*B_measurement_1);
+    data(xii) = (1-0.5)*random(name, A_process_1, 1*B_process_1) - 0.5*random(name, A_measurement_1, 1*B_measurement_1);
 end
 
 xi_kde = linspace(min(data), max(data), 1000); % 1000 evenly spaced points over the range
@@ -172,7 +83,7 @@ kde_pdf_function_q = @(x) interp1(xi_kde, f_kde, x, 'linear', 'extrap');
 
 data_w = zeros(1, 1000);
 for xii = 1:1000
-    data_w(xii) = (1-0.85)*random(name, A_process_1, 1*10*B_process_1) - 0.85*random(name, A_measurement_1, 1*10*B_measurement_1);
+    data_w(xii) = (1-0.5)*random(name, A_process_1, 1*10*B_process_1) - 0.5*random(name, A_measurement_1, 1*10*B_measurement_1);
 end
 
 xi_kde_w = linspace(min(data_w), max(data_w), 1000); % 1000 evenly spaced points over the range
@@ -205,19 +116,14 @@ kde_pdf_function_q_w = @(x) interp1(xi_kde_w, f_kde_w, x, 'linear', 'extrap');
 % xlabel('Data Values');
 % ylabel('Density');
 % grid on;  % Turn on the grid
-%% Simple Jump Markov Particle Filter
 
 
 
 % Define system parameters
-numParticles = 10;  % Number of particles
+numParticles = 100;  % Number of particles
 N_eff_ratio = 1;
 N_eff_thresh = floor(numParticles * N_eff_ratio);
 numModes = 9;  % Number of modes
-load('C:\Users\hedayat2\Desktop\Simulation\Mohammad_Markovian\transition_probability_matrix.mat'); % Loads the transition probability matrix
-transitionMatrix = transition_prob;
-measurementNoiseMean = 0;  % Mean of the measurement noise
-measurementNoiseSD = 50*r*phi*1e-1;  % Standard deviation of the measurement noise
 
 % Initialize particles
 particles = rand(1, numParticles);  % Random initial state
@@ -282,9 +188,6 @@ weights_history_w_plt = zeros(T, numParticles);
 weights_history_w_plt(1, :) = weights_w;
 
 
-% Example system dynamics functions for each mode
-% systemDynamics = arrayfun(@(x) @(state) state + x * 0.1, 1:numModes, 'UniformOutput', false);
-
 % Main filtering loop
 for t = 2:1:T  % Assume T is the number of time steps
     measurement = getMeasurementAtTime(t, Z_real);  % Function to get measurement
@@ -303,14 +206,13 @@ for t = 2:1:T  % Assume T is the number of time steps
         % or sampling them:
 
         % Parameters for the logistic distribution
-        [prior1, prior2] = model_output(t, mode(p), particles_history, particles_history_w, modeHistory, p);
+        [prior1, prior2] = model_output(t, mode(p), particles_history, particles_history_w, modeHistory, p);  % I do not have permission to make the model_output function public but you ban substitute any dynamic system simulator with it with the caveat that this returns on time-step's worth of propagation for system dynamics
+        % The modes refer to mode of the system at each time-step (if your dynamic system is multi-modal, if not, you can set all your time-step modes to be one value or remove it entirely from this code)
         prior_output = [prior1; prior2];
 
 
-        particles(p) = (1-0.85)*(prior_output(1,:) + random(name, A_process_1, 1*B_process_1)) + 0.85*(measurement - random(name, A_measurement_1, 1*B_measurement_1));
-        particles_w(p) = (1-0.85)*(prior_output(2,:) + random(name, A_process_1, 1*10*B_process_1)) + 0.85*(measurement_w - random(name, A_measurement_1, 1*10*B_measurement_1));
-
-        %prior_output_all(:, p) = prior_output;
+        particles(p) = (1-0.5)*(prior_output(1,:) + random(name, A_process_1, 1*B_process_1)) + 0.5*(measurement - random(name, A_measurement_1, 1*B_measurement_1));
+        particles_w(p) = (1-0.5)*(prior_output(2,:) + random(name, A_process_1, 1*10*B_process_1)) + 0.5*(measurement_w - random(name, A_measurement_1, 1*10*B_measurement_1));
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
     
@@ -333,7 +235,7 @@ for t = 2:1:T  % Assume T is the number of time steps
         prior_w = kde_likelihood(particles_w(p), prior_x_i_minus_1_w(1,:), kde_pdf_function_w);
 
 
-        % Calculating the integrals for the parent weights:
+        % Calculating the integrals for the parent weights (For auxiliary particle filters):
 
         I_n_min = -1; % Adjust based on your data
         I_n_max = 1;  % Adjust based on your data
@@ -353,8 +255,8 @@ for t = 2:1:T  % Assume T is the number of time steps
             prior_values(i) = kde_likelihood(I_n, prior_x_i_minus_1(1,:), kde_pdf_function);
 
             % Compute likelihood
-            % Assuming you have a function or a way to compute logistic PDF
-            % Modify this with the correct function to compute logistic PDF
+            % Assuming you have a function or a way to compute the logistic PDF
+            % Modify this with the correct function to compute the  logistic PDF
             likelihood_values(i) = pdf(name, measurement, I_n + A_measurement_1, B_measurement_1);
 
             % Compute the product of prior and likelihood
@@ -439,15 +341,14 @@ for t = 2:1:T  % Assume T is the number of time steps
         prior_output = [prior1; prior2];
 
 
-        particles(p) = (1-0.85)*(prior_output(1,:) + random(name, A_process_1, 1*B_process_1)) + 0.85*(measurement - random(name, A_measurement_1, 1*B_measurement_1));
-        particles_w(p) = (1-0.85)*(prior_output(2,:) + random(name, A_process_1, 1*10*B_process_1)) + 0.85*(measurement_w - random(name, A_measurement_1, 1*10*B_measurement_1));
+        particles(p) = (1-0.5)*(prior_output(1,:) + random(name, A_process_1, 1*B_process_1)) + 0.5*(measurement - random(name, A_measurement_1, 1*B_measurement_1));
+        particles_w(p) = (1-0.5)*(prior_output(2,:) + random(name, A_process_1, 1*10*B_process_1)) + 0.5*(measurement_w - random(name, A_measurement_1, 1*10*B_measurement_1));
 
         prior_output_all(:, p) = prior_output;
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-        % Mode transition
-        currentTransitions = transitionMatrix(currentMode, :);
-        mode(p) = find(mnrnd(1, currentTransitions), 1);  % Sample new mode
+        % Mode transition (if your dynamic system is multi-modal, if not, you can set all your time-step modes to be one value or remove it entirely from this code)
+        mode(p) = ;  % Sample new mode
     end
 
 
@@ -474,7 +375,7 @@ for t = 2:1:T  % Assume T is the number of time steps
         prior_output_w = prior_output_all(2, p);
 
         importance_density = kde_likelihood(particles(p), (1-0.85)*prior_output(1,:) + 0.85*measurement, kde_pdf_function_q);
-        importance_density_w = kde_likelihood(particles_w(p), (1-0.85)*prior_output_w(1,:) + 0.85*measurement_w, kde_pdf_function_q_w);
+        importance_density_w = kde_likelihood(particles_w(p), (1-0.5)*prior_output_w(1,:) + 0.5*measurement_w, kde_pdf_function_q_w);
 
 
         likelihood = pdf(name, measurement, particles(p) + A_measurement_1, B_measurement_1);
@@ -494,7 +395,6 @@ for t = 2:1:T  % Assume T is the number of time steps
         weights_w(p) = likelihood_w*prior_w/importance_density_w/integral_result_w(p);
         %weights(p) = likelihood*weights_history(t-1, p);
     end
-    %prior/importance_density
 
     weights = weights / sum(weights);  % Normalize weights
     weights_w = weights_w / sum(weights_w);  % Normalize weights
@@ -503,7 +403,7 @@ for t = 2:1:T  % Assume T is the number of time steps
     weights_history_plt(t, :) = weights;
     weights_history_w_plt(t, :) = weights_w;
 
-%     % Optional resampling step can be added here
+     % Optional resampling step can be added here
      N_eff = 1/(sum(weights.^2, 'all'));
      N_eff_w = 1/(sum(weights_w.^2, 'all'));
 %     if N_eff > N_eff_thresh
@@ -532,20 +432,6 @@ end
 
 elapsedTimeSeconds = toc;  % End timing
 
-
-% subplotXmanyY_er(6,2)
-% for i = 1:numParticles
-%     pp = particles_history_resamp(:, i)';
-%     plot(particles_history_resamp(:, i), 'color', cmap(1,:))
-%     hold on
-% end
-% plot(estimatedState_history, 'color', cmap(3,:))
-% hold on
-% plot(X_real, 'color', cmap(4,:))
-% ylim([-1.5 1.5])
-% xlim([0 1050])
-% xlabel('Time Step', 'FontSize', 12);
-% ylabel('$I (A)$ (Real Measurement)', 'interpreter', 'latex', 'FontSize', 8);
 
 
 subplotXmanyY_er(7,2)
@@ -602,51 +488,26 @@ plot(N_eff_history_w, 'color', cmap(3,:))
 xlabel('Time Step', 'FontSize', 12);
 ylabel('Number of effective particles', 'interpreter', 'latex', 'FontSize', 8);
 
-% % Print parallel pool status
-% if isempty(poolObj)
-%     fprintf('Parallel pooling was not on.\n');
-% else
-%     fprintf('Parallel pooling was on.\n');
-% end
-
-
 rmse = sqrt(mean((estimatedState_history - X_real).^2));
 fprintf('RMSE of Estimation (RW Current): %f \n', rmse)
-% rmse_list(hyper_q_counter) = rmse;
 estimatedState_history_imputed = fillmissing(estimatedState_history, 'linear');  % Linearly interpolate missing values
 rmse = sqrt(mean((estimatedState_history_imputed - X_real).^2));
-% rmse_list_imputed(hyper_q_counter) = rmse;
 fprintf('RMSE of Estimation (Imputed) (RW Current): %f \n', rmse)
 rmse = sqrt(mean((Z_real - X_real).^2));
 fprintf('RMSE of the measurement signal compared to the true state (RW Current): %f \n', rmse)
-% rmse_list_real(hyper_q_counter) = rmse;
 
 
 rmse = sqrt(mean((estimatedState_history_w - X_real_w).^2));
 fprintf('RMSE of Estimation (RW Omega): %f \n', rmse)
-% rmse_list_w(hyper_q_counter) = rmse;
 estimatedState_history_imputed_w = fillmissing(estimatedState_history_w, 'linear');  % Linearly interpolate missing values
 rmse = sqrt(mean((estimatedState_history_imputed_w - X_real_w).^2));
-% rmse_list_imputed_w(hyper_q_counter) = rmse;
 fprintf('RMSE of Estimation (Imputed) (RW Omega): %f \n', rmse)
 rmse = sqrt(mean((Z_real_w - X_real_w).^2));
 fprintf('RMSE of the measurement signal compared to the true state (RW Omega): %f \n', rmse)
-% rmse_list_real_w(hyper_q_counter) = rmse;
 
 fprintf('Elapsed time: %.2f minutes\n', elapsedTimeSeconds / 60);
-%  hyper_q_counter = hyper_q_counter+1
-% %  hyper_q
-% %  hyper_q_w
-%  rmse_list
-%  rmse_list_imputed
-%  rmse_list_real
-%  rmse_list_w
-%  rmse_list_imputed_w
-%  rmse_list_real_w
-% end
-% end
-% rmse_list
-% rmse_list_imputed
+
+
 %% Custom functions:
 
 function measurement = getMeasurementAtTime(t, measurements)
@@ -679,6 +540,7 @@ w=ones(1,N)./N;
 w_w=ones(1,N)./N;
 end
 
+% Presampling is only used for auxiliary particle filters
 function [x, m, w, p_h, m_h, int_res]=presample(x, m, w, N, p_h, m_h, int_res)
 % Multinomial sampling with Ripley's method
 u=cumprod(rand(1,N).^(1./[N:-1:1]));
