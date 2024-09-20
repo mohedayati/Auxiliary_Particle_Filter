@@ -6,3 +6,6 @@ I have not made some simplifications as shown in Dr. McNames' videos because of 
 Parallel Pooling is needed to run this code on MATLAB for efficiency, therefore, the Parallel Computing License is needed for that. If you do not have it, you can revert the "parfor"s to standard for-loops.
 
 If you have any issues with the codes or questions, please contact me at mohammadshedayati@gmail.com or hedayat2@uwindsor.ca
+
+
+This project reuses the "subplotXmanyY_er.m" code from Dr. Afshin Rahimi's repository, available (https://github.com/drarahimi/MATLAB_Professional_Plots?tab=MIT-1-ov-file), licensed under the MIT License.
