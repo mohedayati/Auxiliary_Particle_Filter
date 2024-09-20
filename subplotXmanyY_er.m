@@ -1,3 +1,7 @@
+% This file was originally created by Dr. Afshin Rahimi and is licensed under the MIT License.
+% See the original repository at https://github.com/drarahimi/MATLAB_Professional_Plots?tab=MIT-1-ov-file .
+
+
 function [ax] = subplotXmanyY_er(m,p,Listener)
 %SUBPLOTXMANYY_ER Creates subplot axes with common x-axis and minimizes the
 %white space between the different axes. The white space removal is
