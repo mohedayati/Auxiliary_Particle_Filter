@@ -1,4 +1,4 @@
-An Auxilliary Particle Filter (APF) implementation for state and parameter estimation of non-linear and multi-modal dynamic systems with added Non-Gaussian noise.
+An Auxilliary Particle Filter (APF) implementation is provided in this repository for state and parameter estimation of non-linear and multi-modal dynamic systems with added Non-Gaussian noise.
 
 To get more context as to what APFs are, please refer to Dr. McNames' YouTube channel: https://www.youtube.com/@JamesMcNames/videos
 
