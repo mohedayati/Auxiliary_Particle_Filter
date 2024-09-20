@@ -123,12 +123,12 @@ kde_pdf_function_q_w = @(x) interp1(xi_kde_w, f_kde_w, x, 'linear', 'extrap');
 numParticles = 100;  % Number of particles
 N_eff_ratio = 1;
 N_eff_thresh = floor(numParticles * N_eff_ratio);
-numModes = 9;  % Number of modes
+numModes = ;  % Number of modes (if your dynamic system is multi-modal, if not, you can set all your time-step modes to be one value or remove it entirely from this code)
 
 % Initialize particles
 particles = rand(1, numParticles);  % Random initial state
 particles_w = rand(1, numParticles);  % Random initial state
-mode = randi([1, numModes], 1, numParticles);  % Initial mode for each particle
+mode = randi([1, numModes], 1, numParticles);  % Initial mode for each particle (if your dynamic system is multi-modal, if not, you can set all your time-step modes to be one value or remove it entirely from this code)
 
 
 % Initialization with specific state range
@@ -148,7 +148,7 @@ particles_history_w(1, :) = particles_w;
 particles_history_resamp_w = zeros(T, numParticles); % Storing the computed states for each particle accounting for their resamplings. The other history variable stores the histories that are compatible with the significant weights that got resampled for getting fed into the model.
 particles_history_resamp_w(1, :) = particles_w;
 
-% Initialize all particles to start in mode one, reflecting 100% certainty
+% Initialize all particles to start in mode one, reflecting 100\% certainty (if your dynamic system is multi-modal, if not, you can set all your time-step modes to be one value or remove it entirely from this code)
 mode = ones(1, numParticles);  % Mode one for all particles
 modeHistory = zeros(T, numParticles);
 modeHistory(1, :) = mode; % Store the modes for the current timestep
